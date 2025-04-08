@@ -5,6 +5,10 @@
 #include "tinyxml_rai/tinyxml_rai.h"
 using namespace raisim;
 
+// Specify the name of the end-effector joint
+const std::string ENDEFFECTOR = "panda_finger_joint3";
+
+// Define some functions for concise code writing
 inline Eigen::Vector3d getJointPosition (const Eigen::VectorXd& gc, int joint_idx);
 inline Eigen::Matrix3d getJointRotation (const Eigen::VectorXd& gc, int joint_idx);
 inline Eigen::Vector3d str2vec(const std::string& str);
@@ -16,15 +20,14 @@ inline Eigen::Vector3d get_origin_pos(int joint_idx);
 inline Eigen::Vector3d get_axis(int joint_idx);
 inline std::string get_joint_type(int joint_idx);
 
-
-const std::string ENDEFFECTOR = "panda_finger_joint3";
-
 /// do not change the name of the method
 inline Eigen::Vector3d getLinearVelocity (const Eigen::VectorXd& gc, const Eigen::VectorXd& gv) {
 
+    // get joint tree from root to end-effector
     int ee_idx = get_joint_idx(ENDEFFECTOR);
     Eigen::VectorXi tree = get_joint_tree(ee_idx);
 
+    // get positional Jacobian
     Eigen::Matrix3Xd J_p;
     J_p.resize(3, gv.size());
     J_p.setZero();
@@ -34,17 +37,20 @@ inline Eigen::Vector3d getLinearVelocity (const Eigen::VectorXd& gc, const Eigen
       else if (get_joint_type(tree(i)) == "prismatic")
         J_p.col(get_gc_index(tree(i))) << getJointRotation(gc, tree(i))*get_axis(tree(i));
     }
-    Eigen::Vector3d linvel = J_p * gv;
 
-    return linvel; /// replace this
+    // calculate linear velocity
+    Eigen::Vector3d lin_vel = J_p * gv;
+    return lin_vel;
 }
 
 /// do not change the name of the method
 inline Eigen::Vector3d getAngularVelocity (const Eigen::VectorXd& gc, const Eigen::VectorXd& gv) {
 
+  // get joint tree from root to end-effector
   int ee_idx = get_joint_idx(ENDEFFECTOR);
   Eigen::VectorXi tree = get_joint_tree(ee_idx);
 
+  //get angular Jacobian
   Eigen::Matrix3Xd J_a;
   J_a.resize(3, gv.size());
   J_a.setZero();
@@ -52,22 +58,26 @@ inline Eigen::Vector3d getAngularVelocity (const Eigen::VectorXd& gc, const Eige
     if (get_joint_type(tree(i)) == "revolute")
       J_a.col(get_gc_index(tree(i))) << getJointRotation(gc, tree(i))*get_axis(tree(i));
   }
-  Eigen::Vector3d angvel = J_a * gv;
 
-  return angvel; /// replace this
+  // calculate angular velocity
+  Eigen::Vector3d ang_vel = J_a * gv;
+  return ang_vel;
 }
 
+// function that calculates the global position of chosen joint
 inline Eigen::Vector3d getJointPosition (const Eigen::VectorXd& gc, int joint_idx) {
 
   // Variables for saving solution
   Vec<3> sol, temp;
   sol.setZero();
 
+  // get joint tree from root to given joint
   Eigen::VectorXi tree = get_joint_tree(joint_idx);
 
   // Run until reaching to the root
   for (int i = tree.size() - 1; i >= 0; i--) {
 
+    // save the information of the joint
     Mat<3,3> R1 = get_origin_rot(tree(i));
     Vec<3> xyz = get_origin_pos(tree(i));
     Vec<3> axis = get_axis(tree(i));
@@ -87,17 +97,20 @@ inline Eigen::Vector3d getJointPosition (const Eigen::VectorXd& gc, int joint_id
   return sol.e();
 }
 
+// function that calculates the rotation matrix between world and chosen joint
 inline Eigen::Matrix3d getJointRotation (const Eigen::VectorXd& gc, int joint_idx) {
 
   // Variables for saving solution
   Mat<3,3> sol, temp;
   sol.setIdentity();
 
+  // get joint tree from root to given joint
   Eigen::VectorXi tree = get_joint_tree(joint_idx);
 
   // Run until reaching to the root
   for (int i = tree.size() - 1; i >= 0; i--) {
 
+    // save the information of the joint
     Mat<3,3> R1 = get_origin_rot(tree(i));
     Vec<3> axis = get_axis(tree(i));
 
@@ -127,7 +140,7 @@ inline Eigen::Vector3d str2vec(const std::string& str) {
   return vec;
 }
 
-// Function that finds the joint element with the name received as a parameter
+// Function that finds the index of given joint name
 inline int get_joint_idx(const std::string& jointName) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");
@@ -142,7 +155,7 @@ inline int get_joint_idx(const std::string& jointName) {
   return -1;
 }
 
-// Function that finds parent joint of the joint received as a parameter
+// Function that finds the tree branch from root to given joint
 inline Eigen::VectorXi get_joint_tree(const int joint_idx) {
 
   TiXmlDocument doc;
@@ -168,7 +181,7 @@ inline Eigen::VectorXi get_joint_tree(const int joint_idx) {
   return tree;
 }
 
-// Function that returns the index of the joint received as parameters in the Generalized Coordinate
+// Function that returns the GC index of given joint
 inline int get_gc_index(const int joint_idx) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");
@@ -185,6 +198,7 @@ inline int get_gc_index(const int joint_idx) {
   return -1;
 }
 
+// Function that returns the rotation matrix of the origin of given joint
 inline Eigen::Matrix3d get_origin_rot(int joint_idx) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");
@@ -204,6 +218,7 @@ inline Eigen::Matrix3d get_origin_rot(int joint_idx) {
   return R1.e();
 }
 
+// Function that returns the positional offset of the origin of given joint
 inline Eigen::Vector3d get_origin_pos(int joint_idx) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");
@@ -220,6 +235,7 @@ inline Eigen::Vector3d get_origin_pos(int joint_idx) {
   return xyz;
 }
 
+// Function that returns the axis vector of given joint
 inline Eigen::Vector3d get_axis(int joint_idx) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");
@@ -235,6 +251,8 @@ inline Eigen::Vector3d get_axis(int joint_idx) {
 
   return axis;
 }
+
+// Function that returns the joint type of given joint
 inline std::string get_joint_type(int joint_idx) {
   TiXmlDocument doc;
   doc.LoadFile("../resource/Panda/panda.urdf");

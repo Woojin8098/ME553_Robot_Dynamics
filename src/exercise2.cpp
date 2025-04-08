@@ -7,6 +7,12 @@
 int main(int argc, char* argv[]) {
   auto binaryPath = raisim::Path::setFromArgv(argv[0]);
 
+  std::random_device rd;                        // 시드
+  std::mt19937 gen(rd());                       // 난수 엔진
+  std::uniform_real_distribution<> dist_large(-0.7, 0.7);
+  std::uniform_real_distribution<> dist_small(-0.1, 0.1);
+
+
   // create raisim world
   raisim::World world; // physics world
   raisim::RaisimServer server(&world); // visualization server
@@ -44,8 +50,32 @@ int main(int argc, char* argv[]) {
     std::cout<<"the angular velocity is not correct. It should be "<< tipAngVel.e().transpose() <<std::endl;
   }
 
-  for (int i=0; i<2000000; i++)
+  for (int j=0; j<2000000; j++) {
     std::this_thread::sleep_for(std::chrono::microseconds(1000));
+    for (int i = 0; i < 7; ++i) gc[i] = dist_large(gen);
+    for (int i = 7; i < 9; ++i) gc[i] = dist_small(gen);
+    for (int i = 0; i < 7; ++i) gv[i] = dist_large(gen);
+    for (int i = 7; i < 9; ++i) gv[i] = dist_small(gen);
+    panda->setState(gc, gv);
+
+    // visualization
+
+    panda->getFrameVelocity("panda_finger_joint3", tipVel);
+    panda->getFrameAngularVelocity("panda_finger_joint3", tipAngVel);
+
+    if((tipVel.e() - getLinearVelocity(gc, gv)).norm() < 1e-8) {
+      std::cout<<"the linear velocity is correct "<<std::endl;
+    } else {
+      std::cout<<"the linear velocity is not correct. It should be "<< tipVel.e().transpose() <<std::endl;
+    }
+
+    if((tipAngVel.e() - getAngularVelocity(gc, gv)).norm() < 1e-8) {
+      std::cout<<"the angular velocity is correct "<<std::endl;
+    } else {
+      std::cout<<"the angular velocity is not correct. It should be "<< tipAngVel.e().transpose() <<std::endl;
+    }
+  }
+
 
   server.killServer();
 
