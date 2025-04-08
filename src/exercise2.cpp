@@ -2,7 +2,7 @@
 #define __MAKE_STR(x) #x
 
 #include "raisim/RaisimServer.hpp"
-#include "exercise2_STUDENTID.hpp"
+#include "exercise2_20253164.hpp"
 
 int main(int argc, char* argv[]) {
   auto binaryPath = raisim::Path::setFromArgv(argv[0]);
